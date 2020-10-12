@@ -1,7 +1,10 @@
 (ns hiccup.page_test
   (:require [clojure.test :refer :all]
             [hiccup.page :refer :all])
-  (:import java.net.URI))
+  #?(:clj
+     (:import java.net.URI)
+     :cljr
+     (:import System.Uri)))
 
 (deftest html4-test
   (is (= (html4 [:body [:p "Hello" [:br] "World"]])
@@ -71,14 +74,14 @@
 
 (deftest include-js-test
   (is (= (include-js "foo.js")
-         (list [:script {:type "text/javascript", :src (URI. "foo.js")}])))
+         (list [:script {:type "text/javascript", :src (Uri. "foo.js")}])))
   (is (= (include-js "foo.js" "bar.js")
-         (list [:script {:type "text/javascript", :src (URI. "foo.js")}]
-               [:script {:type "text/javascript", :src (URI. "bar.js")}]))))
+         (list [:script {:type "text/javascript", :src (Uri. "foo.js")}]
+               [:script {:type "text/javascript", :src (Uri. "bar.js")}]))))
 
 (deftest include-css-test
   (is (= (include-css "foo.css")
-         (list [:link {:type "text/css", :href (URI. "foo.css"), :rel "stylesheet"}])))
+         (list [:link {:type "text/css", :href (Uri. "foo.css"), :rel "stylesheet"}])))
   (is (= (include-css "foo.css" "bar.css")
-         (list [:link {:type "text/css", :href (URI. "foo.css"), :rel "stylesheet"}]
-               [:link {:type "text/css", :href (URI. "bar.css"), :rel "stylesheet"}]))))
+         (list [:link {:type "text/css", :href (Uri. "foo.css"), :rel "stylesheet"}]
+               [:link {:type "text/css", :href (Uri. "bar.css"), :rel "stylesheet"}]))))

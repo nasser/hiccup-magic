@@ -1,8 +1,12 @@
 (ns hiccup.util
   "Utility functions for Hiccup."
   (:require [clojure.string :as str])
-  (:import java.net.URI
-           java.net.URLEncoder))
+  #?(:clj
+     (:import java.net.URI
+              java.net.URLEncoder)
+     :cljr
+     (:import System.Uri
+              System.Web.HttpUtility)))
 
 (def ^:dynamic ^:no-doc *html-mode* :xhtml)
 
@@ -27,17 +31,27 @@
   clojure.lang.Keyword
   (to-str [k] (name k))
   clojure.lang.Ratio
-  (to-str [r] (str (float r)))
-  java.net.URI
-  (to-str [u]
-    (if (or (.getHost u)
-            (nil? (.getPath u))
-            (not (-> (.getPath u) (.startsWith "/"))))
-      (str u)
-      (let [base (str *base-url*)]
-        (if (.endsWith base "/")
-          (str (subs base 0 (dec (count base))) u)
-          (str base u)))))
+  (to-str [r] (str (.ToSingle r nil))) ;; bug
+  #?@(:clr [java.net.URI
+            (to-str [u]
+                    (if (or (.getHost u)
+                            (nil? (.getPath u))
+                            (not (-> (.getPath u) (.startsWith "/"))))
+                      (str u)
+                      (let [base (str *base-url*)]
+                        (if (.endsWith base "/")
+                          (str (subs base 0 (dec (count base))) u)
+                          (str base u)))))]
+      :cljr [System.Uri
+             (to-str [u]
+                     (if (or (.Host u)
+                             (nil? (.PathAndQuery u))
+                             (not (-> (.PathAndQuery u) (.StartsWith "/"))))
+                       (str u)
+                       (let [base (str *base-url*)]
+                         (if (.EndsWith base "/")
+                           (str (subs base 0 (dec (count base))) u)
+                           (str base u)))))])
   Object
   (to-str [x] (str x))
   nil
@@ -49,20 +63,38 @@
   (apply str (map to-str xs)))
 
 (defprotocol ToURI
-  (^java.net.URI to-uri [x] "Convert a value into a URI."))
+  #?(:clj
+     (^java.net.URI to-uri [x] "Convert a value into a URI.")
+     :cljr
+     (^System.Uri to-uri [x] "Convert a value into a URI.")))
 
-(extend-protocol ToURI
-  java.net.URI
-  (to-uri [u] u)
-  String
-  (to-uri [s] (URI. s)))
+#?(:clj
+   (extend-protocol ToURI
+     java.net.URI
+     (to-uri [u] u)
+     String
+     (to-uri [s] (URI. s)))
+   :cljr
+   (extend-protocol ToURI
+     System.Uri
+     (to-uri [u] u)
+     String
+     (to-uri [s] (Uri. s))))
 
-(deftype RawString [^String s]
-  Object
-  (^String toString [this] s)
-  (^boolean equals [this other]
-    (and (instance? RawString other)
-         (= s  (.toString other)))))
+#?(:clj
+   (deftype RawString [^String s]
+     Object
+     (^String toString [this] s)
+     (^boolean equals [this other]
+       (and (instance? RawString other)
+            (= s  (.toString other)))))
+   :cljr
+   (deftype RawString [^String s]
+     Object
+     (^String ToString [this] s)
+     (^boolean Equals [this other]
+       (and (instance? RawString other)
+            (= s  (.ToString other))))))
 
 (defn raw-string
   "Converts one or more strings into an object that will not be escaped when
@@ -80,12 +112,21 @@
 (defn escape-html
   "Change special characters into HTML character entities."
   [text]
-  (.. ^String (as-str text)
-    (replace "&"  "&amp;")
-    (replace "<"  "&lt;")
-    (replace ">"  "&gt;")
-    (replace "\"" "&quot;")
-    (replace "'" (if (= *html-mode* :sgml) "&#39;" "&apos;"))))
+  ;; dynamic!
+  #?(:clr
+     (.. ^String (as-str text)
+         (replace "&"  "&amp;")
+         (replace "<"  "&lt;")
+         (replace ">"  "&gt;")
+         (replace "\"" "&quot;")
+         (replace "'" (if (= *html-mode* :sgml) "&#39;" "&apos;")))
+     :cljr
+     (.. ^String (as-str text)
+         (Replace "&"  "&amp;")
+         (Replace "<"  "&lt;")
+         (Replace ">"  "&gt;")
+         (Replace "\"" "&quot;")
+         (Replace "'" (if (= *html-mode* :sgml) "&#39;" "&apos;")))))
 
 (defmacro with-encoding
   "Sets a default encoding for URL encoding strings. Defaults to UTF-8."
@@ -98,8 +139,10 @@
 
 (extend-protocol URLEncode
   String
-  (url-encode [s] (URLEncoder/encode s *encoding*))
-  java.util.Map
+  #?(:clr (url-encode [s] (URLEncoder/encode s *encoding*))
+     :cljr (url-encode [s] (HttpUtility/UrlEncode s *encoding*)))
+  #?(:clr java.util.Map
+     :cljr System.Collections.Hashtable)
   (url-encode [m]
     (str/join "&"
       (for [[k v] m]

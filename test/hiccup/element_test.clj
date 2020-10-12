@@ -1,7 +1,10 @@
 (ns hiccup.element_test
   (:require [clojure.test :refer :all]
             [hiccup.element :refer :all])
-  (:import java.net.URI))
+  #?(:clj
+     (:import java.net.URI)
+     :cljr
+     (:import System.Uri)))
 
 (deftest javascript-tag-test
   (is (= (javascript-tag "alert('hello');")
@@ -10,11 +13,11 @@
 
 (deftest link-to-test
   (is (= (link-to "/")
-         [:a {:href (URI. "/")} nil]))
+         [:a {:href (Uri. "/")} nil]))
   (is (= (link-to "/" "foo")
-         [:a {:href (URI. "/")} (list "foo")]))
+         [:a {:href (Uri. "/")} (list "foo")]))
   (is (= (link-to "/" "foo" "bar")
-         [:a {:href (URI. "/")} (list "foo" "bar")])))
+         [:a {:href (Uri. "/")} (list "foo" "bar")])))
 
 (deftest mail-to-test
   (is (= (mail-to "foo@example.com")

@@ -99,7 +99,8 @@
 (defn- normalize-element*
   [[tag & content] merge-attributes-fn]
   (when (not (or (keyword? tag) (symbol? tag) (string? tag)))
-    (throw (IllegalArgumentException. (str tag " is not a valid element name."))))
+    (throw (new #?(:clj IllegalArgumentException :cljr ArgumentException)
+                (str tag " is not a valid element name."))))
   (let [[_ tag id class] (re-matches re-tag (util/as-str tag))
         classes          (if class (str/replace class "." " "))
         map-attrs        (first content)]
@@ -214,7 +215,8 @@
   [x]
   (or (= (form-name x) "for")
       (not (unevaluated? x))
-      (not-hint? x java.util.Map)))
+      #?(:clj (not-hint? x java.util.Map)
+         :cljr (not-hint? x System.Collections.Hashtable))))
 
 (defn- element-compile-strategy
   "Returns the compilation strategy to use for a given element."
@@ -296,7 +298,7 @@
             (util/raw-string? expr) expr
             (literal? expr) (escape-html expr)
             (hint? expr String) `(escape-html ~expr)
-            (hint? expr Number) expr
+            #?@(:clj [(hint? expr Number) expr])
             (seq? expr) (compile-form expr)
             :else `(render-html ~expr)))))
 
